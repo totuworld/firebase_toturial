@@ -45,5 +45,9 @@ sysinfo.txt
 !.vscode/extensions.json
 .history
 
+### build test
+/ios_build_test/
+GoogleService-Info.plist
+GoogleService-Info.plist.meta
 
 # End of https://www.gitignore.io/api/unity,visualstudiocode

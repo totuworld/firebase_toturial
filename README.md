@@ -6,7 +6,7 @@ Firebase용 Unity tutorial을 진행할 때 사용되는 프로젝트
 * Firebase 계정
 
 ## 진행 사항
-- [ ] Auth
-  - [ ] 익명
+- [x] Auth
+  - [x] [익명](http://totuworld.github.io/2018/03/22/firebaseandunity-01/)
   - [ ] Facebook
 - [ ] Realtime Database
