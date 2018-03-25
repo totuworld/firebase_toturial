@@ -74,6 +74,27 @@ public class gfb_auth_test : MonoBehaviour {
       });
   }
 
+  /** Facebook access token으로 Firebase 등록 요청 */
+  void registerFacebookAccountToFirebase(AccessToken accessToken) {
+    Credential credential = FacebookAuthProvider.GetCredential(accessToken.TokenString);
+    auth
+      .SignInWithCredentialAsync(credential)
+      .ContinueWith(task => {
+        if (task.IsCanceled) {
+          Log("SignInWithCredentialAsync was canceled.");
+          return;
+        }
+        if (task.IsFaulted) {
+          Log("SignInWithCredentialAsync encountered an error: " + task.Exception);
+          return;
+        }
+
+        user = task.Result;
+        Log(string.Format("User signed in successfully: {0} ({1})",
+            user.DisplayName, user.UserId));
+      });
+  }
+
   void Log(string logText)
   {
     txtPrint.text += (logText + "\n");
@@ -103,7 +124,7 @@ public class gfb_auth_test : MonoBehaviour {
   /** 페이스북 로그인 요청(버튼과 연결) */
   public void facebookLogin() {
     var param = new List<string>() { "public_profile", "email" };
-    FB.LogInWithReadPermissions(param);
+    FB.LogInWithReadPermissions(param, FacebookAuthCallback);
   }
 
   /** 페이스북 로그인 결과 콜백 */
@@ -116,7 +137,8 @@ public class gfb_auth_test : MonoBehaviour {
       var accessToken = AccessToken.CurrentAccessToken;
       Log(string.Format("Facebook access token: {0}", accessToken.TokenString));
 
-      // TODO: firebase facebook 로그인 연결 호출 부분
+      // firebase facebook 로그인 연결 호출 부분
+      registerFacebookAccountToFirebase(accessToken);
 
     } else {
       Log("User cancelled login");
