@@ -37,15 +37,22 @@ public class gfb_auth_test : MonoBehaviour {
     auth.StateChanged += AuthStateChanged;
   }
 
+    /** firebase 앱 내에 가입 여부를 체크한다. */
+  private bool SingedInFirebase {
+    get {
+      return user != auth.CurrentUser && auth.CurrentUser != null;
+    }
+  }
+
   /** 상태변화 추적 */
   void AuthStateChanged(object sender, System.EventArgs eventArgs) {
     if (auth.CurrentUser != user) {
-      bool signedIn = user != auth.CurrentUser && auth.CurrentUser != null;
-      if (!signedIn && user != null) {
+
+      if (!SingedInFirebase && user != null) {
         Debug.LogFormat("Signed out {0}", user.UserId);
       }
       user = auth.CurrentUser;
-      if (signedIn) {
+      if (SingedInFirebase) {
         Log(string.Format("Signed in {0}", user.UserId));
         displayName = user.DisplayName ?? "";
         emailAddress = user.Email ?? "";
@@ -74,36 +81,17 @@ public class gfb_auth_test : MonoBehaviour {
       });
   }
 
-  /** Facebook access token으로 Firebase 등록 요청 */
-  void registerFacebookAccountToFirebase(AccessToken accessToken) {
-    Credential credential = FacebookAuthProvider.GetCredential(accessToken.TokenString);
-    auth
-      .SignInWithCredentialAsync(credential)
-      .ContinueWith(task => {
-        if (task.IsCanceled) {
-          Log("SignInWithCredentialAsync was canceled.");
-          return;
-        }
-        if (task.IsFaulted) {
-          Log("SignInWithCredentialAsync encountered an error: " + task.Exception);
-          return;
-        }
-
-        user = task.Result;
-        Log(string.Format("User signed in successfully: {0} ({1})",
-            user.DisplayName, user.UserId));
-      });
-  }
-
   void Log(string logText)
   {
     txtPrint.text += (logText + "\n");
     Debug.Log(logText);
   }
 
+  #region FACEBOOK 로그인
   /** Facebook 초기화 콜백 */
   void FacebookInitCallBack() {
     if (FB.IsInitialized) {
+      Log("Successed to Initalize the Facebook SDK");
       FB.ActivateApp();
     } else {
       Log("Failed to Initalize the Facebook SDK");
@@ -137,11 +125,61 @@ public class gfb_auth_test : MonoBehaviour {
       var accessToken = AccessToken.CurrentAccessToken;
       Log(string.Format("Facebook access token: {0}", accessToken.TokenString));
 
-      // firebase facebook 로그인 연결 호출 부분
-      registerFacebookAccountToFirebase(accessToken);
+      // 이미 firebase에 account 등록이 되었는지 확인
+      if (SingedInFirebase) {
+        linkFacebookAccount(accessToken);
+      } else {
+        // firebase facebook 로그인 연결 호출 부분
+        registerFacebookAccountToFirebase(accessToken);
+      }
 
     } else {
       Log("User cancelled login");
     }
   }
+
+    /** Facebook access token으로 Firebase 등록 요청 */
+  void registerFacebookAccountToFirebase(AccessToken accessToken) {
+    Credential credential = FacebookAuthProvider.GetCredential(accessToken.TokenString);
+
+    auth
+      .SignInWithCredentialAsync(credential)
+      .ContinueWith(task => {
+        if (task.IsCanceled) {
+          Log("SignInWithCredentialAsync was canceled.");
+          return;
+        }
+        if (task.IsFaulted) {
+          Log("SignInWithCredentialAsync encountered an error: " + task.Exception);
+          return;
+        }
+
+        user = task.Result;
+        Log(string.Format("User signed in successfully: {0} ({1})",
+            user.DisplayName, user.UserId));
+      });
+  }
+
+  /** Firebase에 등록된 account를 보유했을 때 새로운 인증을 연결한다. */
+  void linkFacebookAccount(AccessToken accessToken) {
+    Credential credential = FacebookAuthProvider.GetCredential(accessToken.TokenString);
+
+    auth.CurrentUser
+      .LinkWithCredentialAsync(credential)
+      .ContinueWith(task => {
+        if (task.IsCanceled) {
+          Log("LinkWithCredentialAsync was canceled.");
+          return;
+        }
+        if (task.IsFaulted) {
+          Log("LinkWithCredentialAsync encountered an error: " + task.Exception);
+          return;
+        }
+
+        user = task.Result;
+        Log(string.Format("Credentials successfully linked to Firebase user: {0} ({1})",
+            user.DisplayName, user.UserId));
+      });
+  }
+  #endregion
 }
